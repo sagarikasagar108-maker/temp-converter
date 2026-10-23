@@ -1,56 +1,343 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Temperature Converter</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #eef2f7; display: flex;
-         justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-  .card { background: #fff; padding: 32px; border-radius: 12px; width: 340px;
-          box-shadow: 0 4px 16px rgba(0,0,0,.12); }
-  h1 { font-size: 22px; margin: 0 0 20px; text-align: center; }
-  label { font-size: 14px; color: #444; }
-  input, select, button { width: 100%; padding: 10px; margin: 6px 0 16px;
-          font-size: 16px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
-  button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
-  button:hover { background: #1d4ed8; }
-  #result { text-align: center; font-size: 20px; font-weight: bold; min-height: 28px; }
-  .error { color: #c0392b; }
+  @property --h { syntax: '<number>'; inherits: true; initial-value: 200; }
+
+  :root, [data-theme="dark"] {
+    --bg: #080c16; --panel: rgba(255,255,255,.045); --border: rgba(255,255,255,.10);
+    --text: #e8ecf4; --muted: #8b97ad; --field: rgba(255,255,255,.06); --track: rgba(255,255,255,.09);
+    --glow: .55; --shadow: 0 20px 50px rgba(0,0,0,.45);
+  }
+  [data-theme="light"] {
+    --bg: #eef2f8; --panel: #ffffff; --border: #e2e8f0;
+    --text: #0f172a; --muted: #64748b; --field: #f1f5f9; --track: #e2e8f0;
+    --glow: .25; --shadow: 0 12px 32px rgba(15,23,42,.10);
+  }
+  html { --h: 200; --heat: hsl(var(--h) 90% 55%); transition: --h .8s ease; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 32px 20px;
+    font-family: 'Segoe UI', system-ui, Arial, sans-serif; color: var(--text);
+    background:
+      radial-gradient(900px 520px at 12% -8%, hsl(var(--h) 90% 55% / calc(var(--glow) * .55)), transparent 60%),
+      radial-gradient(700px 520px at 100% 100%, hsl(calc(var(--h) + 60) 90% 55% / calc(var(--glow) * .35)), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  .app { max-width: 1040px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 28px; }
+  .title { display: flex; align-items: center; gap: 14px; }
+  .logo { font-size: 38px; line-height: 1; filter: drop-shadow(0 0 14px var(--heat)); }
+  h1 { margin: 0; font-size: 26px; letter-spacing: .2px; }
+  .tagline { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+  .theme-btn {
+    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 999px; transition: all .2s;
+  }
+  .theme-btn:hover { border-color: var(--heat); box-shadow: 0 0 18px hsl(var(--h) 90% 55% / .35); }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 20px; }
+  .panel {
+    padding: 24px; border-radius: 20px; background: var(--panel); border: 1px solid var(--border);
+    box-shadow: var(--shadow); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .panel h2 { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+  #value {
+    width: 100%; padding: 16px 18px; font-size: 38px; font-weight: 700; color: var(--text);
+    background: var(--field); border: 1px solid var(--border); border-radius: 16px; outline: none;
+    transition: border-color .2s, box-shadow .2s; -moz-appearance: textfield;
+  }
+  #value::-webkit-outer-spin-button, #value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #value::placeholder { color: var(--muted); font-weight: 400; font-size: 22px; }
+  #value:focus { border-color: var(--heat); box-shadow: 0 0 0 4px hsl(var(--h) 90% 55% / .2); }
+
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 16px 0 22px; padding: 5px;
+         background: var(--field); border: 1px solid var(--border); border-radius: 14px; }
+  .seg button { padding: 11px 0; font-size: 16px; font-weight: 600; cursor: pointer; color: var(--muted);
+                background: transparent; border: none; border-radius: 10px; transition: all .25s; }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { color: #fff; background: var(--heat); box-shadow: 0 6px 18px hsl(var(--h) 90% 55% / .45); }
+
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile { padding: 16px 12px; border-radius: 16px; background: var(--field); border: 1px solid var(--border); transition: all .3s; }
+  .tile .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .tile .num { font-size: 22px; font-weight: 700; word-break: break-all; }
+  .tile .num small { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .tile.src { border-color: var(--heat); box-shadow: 0 0 24px hsl(var(--h) 90% 55% / .3); }
+
+  .mood { display: flex; align-items: center; gap: 10px; margin: 22px 0 18px; font-size: 15px; font-weight: 600; min-height: 22px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--heat); box-shadow: 0 0 12px var(--heat); flex: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--text); background: var(--field);
+          border: 1px solid var(--border); border-radius: 999px; transition: all .2s; }
+  .chip:hover { border-color: var(--heat); transform: translateY(-2px); box-shadow: 0 6px 16px hsl(var(--h) 90% 55% / .3); }
+
+  .thermo { display: flex; justify-content: center; align-items: flex-start; gap: 20px; padding: 8px 0 4px; }
+  .ticks { position: relative; width: 48px; height: 250px; }
+  .tick { position: absolute; right: 0; transform: translateY(50%); font-size: 12px; color: var(--muted); }
+  .tick::after { content: ''; display: inline-block; width: 8px; height: 1px; background: var(--muted); margin-left: 6px; vertical-align: middle; }
+  .stem { display: flex; flex-direction: column; align-items: center; }
+  .tube { position: relative; width: 30px; height: 250px; border-radius: 15px 15px 0 0; overflow: hidden;
+          background: var(--track); border: 1px solid var(--border); border-bottom: none; }
+  .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: var(--heat);
+          transition: height .9s cubic-bezier(.34, 1.3, .64, 1); }
+  .fill::after { content: ''; position: absolute; top: 0; bottom: 0; left: 5px; width: 5px; border-radius: 3px; background: rgba(255,255,255,.35); }
+  .bulb { position: relative; z-index: 1; width: 66px; height: 66px; margin-top: -10px; border-radius: 50%;
+          background: var(--heat); box-shadow: 0 0 34px hsl(var(--h) 90% 55% / .6); animation: pulse 2.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 22px hsl(var(--h) 90% 55% / .45); } 50% { box-shadow: 0 0 44px hsl(var(--h) 90% 55% / .8); } }
+  .readout { flex: 1; min-width: 0; align-self: center; }
+  .readout .small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .readout .big { font-size: 34px; font-weight: 800; margin: 6px 0; color: var(--heat); text-shadow: 0 0 22px hsl(var(--h) 90% 55% / .5); word-break: break-all; }
+  .readout .hint { font-size: 13px; color: var(--muted); }
+
+  .clear { font-size: 12px; cursor: pointer; color: var(--muted); background: none; border: none; padding: 4px 8px; border-radius: 8px; }
+  .clear:hover { color: var(--text); background: var(--field); }
+  #history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .h-item { width: 100%; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 14px; cursor: pointer;
+            color: var(--text); background: var(--field); border: 1px solid var(--border); border-radius: 12px; transition: all .2s; }
+  .h-item:hover { border-color: var(--heat); transform: translateX(3px); }
+  .h-main { font-size: 15px; font-weight: 700; }
+  .h-sub { font-size: 12px; color: var(--muted); }
+  .empty { font-size: 14px; color: var(--muted); text-align: center; padding: 14px 0; }
+
+  .footer { margin-top: 26px; text-align: center; font-size: 12px; color: var(--muted); }
+  .badge { display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+    body { padding: 22px 14px; }
+  }
+  @media (max-width: 460px) {
+    .tile .num { font-size: 16px; }
+    .tile .num small { display: none; }
+    #value { font-size: 30px; }
+    h1 { font-size: 21px; }
+    .tagline { display: none; }
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>Temperature Converter</h1>
-  <label for="value">Temperature value</label>
-  <input type="number" id="value" step="any" placeholder="e.g. 100">
+<div class="app">
+  <header>
+    <div class="title">
+      <div class="logo">&#127777;&#65039;</div>
+      <div>
+        <h1>Temperature Converter</h1>
+        <p class="tagline">Instant conversion between Celsius, Fahrenheit and Kelvin</p>
+      </div>
+    </div>
+    <button class="theme-btn" id="themeBtn">Light mode</button>
+  </header>
 
-  <label for="mode">Conversion</label>
-  <select id="mode">
-    <option value="c2f">Celsius to Fahrenheit</option>
-    <option value="f2c">Fahrenheit to Celsius</option>
-    <option value="c2k">Celsius to Kelvin</option>
-  </select>
+  <div class="grid">
+    <div class="col">
+      <section class="panel">
+        <div class="panel-head"><h2>Converter</h2></div>
+        <input id="value" type="number" step="any" inputmode="decimal" placeholder="Enter a temperature" autofocus>
+        <div class="seg" id="seg">
+          <button data-u="C" class="on">&deg;C</button>
+          <button data-u="F">&deg;F</button>
+          <button data-u="K">K</button>
+        </div>
+        <div class="tiles">
+          <div class="tile" id="tile-C"><div class="lbl">Celsius</div><div class="num"><span id="out-C">--</span><small>&deg;C</small></div></div>
+          <div class="tile" id="tile-F"><div class="lbl">Fahrenheit</div><div class="num"><span id="out-F">--</span><small>&deg;F</small></div></div>
+          <div class="tile" id="tile-K"><div class="lbl">Kelvin</div><div class="num"><span id="out-K">--</span><small>K</small></div></div>
+        </div>
+        <div class="mood"><span class="dot"></span><span id="mood">Enter a temperature to begin</span></div>
+        <div class="chips">
+          <button class="chip" data-v="0" data-u="C">&#10052;&#65039; Freezing</button>
+          <button class="chip" data-v="25" data-u="C">&#127969; Room</button>
+          <button class="chip" data-v="37" data-u="C">&#129658; Body</button>
+          <button class="chip" data-v="100" data-u="C">&#128168; Boiling</button>
+          <button class="chip" data-v="0" data-u="K">&#129482; Absolute zero</button>
+        </div>
+      </section>
+    </div>
 
-  <button onclick="convert()">Convert</button>
-  <div id="result"></div>
+    <div class="col">
+      <section class="panel">
+        <div class="panel-head"><h2>Thermometer</h2></div>
+        <div class="thermo">
+          <div class="ticks">
+            <span class="tick" style="bottom:100%">150&deg;</span>
+            <span class="tick" style="bottom:75%">100&deg;</span>
+            <span class="tick" style="bottom:50%">50&deg;</span>
+            <span class="tick" style="bottom:25%">0&deg;</span>
+            <span class="tick" style="bottom:0%">-50&deg;</span>
+          </div>
+          <div class="stem">
+            <div class="tube"><div class="fill" id="fill"></div></div>
+            <div class="bulb"></div>
+          </div>
+          <div class="readout">
+            <div class="small">Reading</div>
+            <div class="big" id="reading">--</div>
+            <div class="hint">Scale shown in &deg;C</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>History</h2><button class="clear" id="clear">Clear</button></div>
+        <ul id="history"></ul>
+        <div class="empty" id="empty">Your conversions will appear here</div>
+      </section>
+    </div>
+  </div>
+
+  <div class="footer"><span class="badge">Jenkins CI/CD &bull; Docker &bull; nginx</span></div>
 </div>
 
 <script>
-function convert() {
-  const raw = document.getElementById("value").value;
-  const mode = document.getElementById("mode").value;
-  const out = document.getElementById("result");
-  if (raw === "") { out.className = "error"; out.textContent = "Please enter a number."; return; }
-  const v = parseFloat(raw);
-  const deg = "\u00B0";
-  let text;
-  if (mode === "c2f") text = v.toFixed(2) + " " + deg + "C = " + (v * 9 / 5 + 32).toFixed(2) + " " + deg + "F";
-  else if (mode === "f2c") text = v.toFixed(2) + " " + deg + "F = " + ((v - 32) * 5 / 9).toFixed(2) + " " + deg + "C";
-  else text = v.toFixed(2) + " " + deg + "C = " + (v + 273.15).toFixed(2) + " K";
-  out.className = "";
-  out.textContent = text;
-}
+(function () {
+  var input = document.getElementById('value');
+  var fill = document.getElementById('fill');
+  var reading = document.getElementById('reading');
+  var mood = document.getElementById('mood');
+  var list = document.getElementById('history');
+  var empty = document.getElementById('empty');
+  var root = document.documentElement;
+  var units = ['C', 'F', 'K'];
+  var sym = { C: '\u00B0C', F: '\u00B0F', K: 'K' };
+  var unit = 'C';
+  var history = [];
+  var timer = null;
+
+  function toC(v, u) { return u === 'C' ? v : (u === 'F' ? (v - 32) * 5 / 9 : v - 273.15); }
+  function fromC(c, u) { return u === 'C' ? c : (u === 'F' ? c * 9 / 5 + 32 : c + 273.15); }
+  function fmt(x) { return x.toFixed(2); }
+
+  /* ---------- theme ---------- */
+  var themeBtn = document.getElementById('themeBtn');
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    themeBtn.textContent = t === 'dark' ? '\u2600\uFE0F Light mode' : '\uD83C\uDF19 Dark mode';
+  }
+  var savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('tc_theme') || 'dark'; } catch (e) {}
+  applyTheme(savedTheme);
+  themeBtn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem('tc_theme', next); } catch (e) {}
+  });
+
+  /* ---------- history ---------- */
+  try { history = JSON.parse(localStorage.getItem('tc_history') || '[]'); } catch (e) { history = []; }
+  function saveHistory() { try { localStorage.setItem('tc_history', JSON.stringify(history)); } catch (e) {} }
+
+  function renderHistory() {
+    list.innerHTML = '';
+    if (!history.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    history.forEach(function (h) {
+      var c = toC(h.v, h.u);
+      var others = units.filter(function (u) { return u !== h.u; })
+        .map(function (u) { return fmt(fromC(c, u)) + ' ' + sym[u]; }).join('  \u00B7  ');
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.className = 'h-item';
+      var a = document.createElement('span'); a.className = 'h-main'; a.textContent = fmt(h.v) + ' ' + sym[h.u];
+      var o = document.createElement('span'); o.className = 'h-sub'; o.textContent = '\u2192 ' + others;
+      b.appendChild(a); b.appendChild(o);
+      b.addEventListener('click', function () { input.value = h.v; setUnit(h.u); });
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+
+  function addHistory() {
+    if (input.value === '') return;
+    var v = parseFloat(input.value);
+    if (isNaN(v) || toC(v, unit) < -273.15) return;
+    history = history.filter(function (h) { return !(h.v === v && h.u === unit); });
+    history.unshift({ v: v, u: unit });
+    history = history.slice(0, 8);
+    saveHistory();
+    renderHistory();
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(addHistory, 1100); }
+
+  document.getElementById('clear').addEventListener('click', function () {
+    history = []; saveHistory(); renderHistory();
+  });
+
+  /* ---------- main update ---------- */
+  function clearOutputs() {
+    units.forEach(function (u) {
+      document.getElementById('out-' + u).textContent = '--';
+      document.getElementById('tile-' + u).classList.remove('src');
+    });
+    fill.style.height = '0%';
+    reading.textContent = '--';
+    root.style.setProperty('--h', 200);
+  }
+
+  function update() {
+    if (input.value === '') {
+      clearOutputs();
+      mood.textContent = 'Enter a temperature to begin';
+      return;
+    }
+    var v = parseFloat(input.value);
+    var c = toC(v, unit);
+    if (c < -273.15) {
+      clearOutputs();
+      mood.textContent = '\u26A0\uFE0F Below absolute zero, not possible';
+      return;
+    }
+    units.forEach(function (u) {
+      var val = (u === unit) ? v : fromC(c, u);
+      document.getElementById('out-' + u).textContent = fmt(val);
+      document.getElementById('tile-' + u).classList.toggle('src', u === unit);
+    });
+
+    var pct = Math.max(0, Math.min(1, (c + 50) / 200));
+    fill.style.height = (pct * 100) + '%';
+    root.style.setProperty('--h', Math.round(210 - pct * 210));
+    reading.textContent = c.toFixed(1) + '\u00B0C';
+
+    var text;
+    if (c >= 100)     text = '\uD83D\uDCA8 Boiling point or above';
+    else if (c > 35)  text = '\uD83D\uDD25 Very hot';
+    else if (c > 25)  text = '\u2600\uFE0F Warm';
+    else if (c > 15)  text = '\uD83D\uDE0A Comfortable';
+    else if (c > 0)   text = '\uD83C\uDF43 Cool';
+    else              text = '\u2744\uFE0F Freezing, bundle up!';
+    mood.textContent = text;
+  }
+
+  function setUnit(u) {
+    unit = u;
+    document.querySelectorAll('#seg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.u === u);
+    });
+    update();
+    schedule();
+  }
+
+  input.addEventListener('input', function () { update(); schedule(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(timer); addHistory(); } });
+  document.querySelectorAll('#seg button').forEach(function (b) {
+    b.addEventListener('click', function () { setUnit(b.dataset.u); });
+  });
+  document.querySelectorAll('.chip').forEach(function (b) {
+    b.addEventListener('click', function () { input.value = b.dataset.v; setUnit(b.dataset.u); });
+  });
+
+  renderHistory();
+  update();
+})();
 </script>
 </body>
 </html>
