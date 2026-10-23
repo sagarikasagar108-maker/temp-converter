@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Temperature Converter</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #eef2f7; display: flex;
+         justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+  .card { background: #fff; padding: 32px; border-radius: 12px; width: 340px;
+          box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+  h1 { font-size: 22px; margin: 0 0 20px; text-align: center; }
+  label { font-size: 14px; color: #444; }
+  input, select, button { width: 100%; padding: 10px; margin: 6px 0 16px;
+          font-size: 16px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+  button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  #result { text-align: center; font-size: 20px; font-weight: bold; min-height: 28px; }
+  .error { color: #c0392b; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Temperature Converter</h1>
+  <label for="value">Temperature value</label>
+  <input type="number" id="value" step="any" placeholder="e.g. 100">
+
+  <label for="mode">Conversion</label>
+  <select id="mode">
+    <option value="c2f">Celsius to Fahrenheit</option>
+    <option value="f2c">Fahrenheit to Celsius</option>
+    <option value="c2k">Celsius to Kelvin</option>
+  </select>
+
+  <button onclick="convert()">Convert</button>
+  <div id="result"></div>
+</div>
+
+<script>
+function convert() {
+  const raw = document.getElementById("value").value;
+  const mode = document.getElementById("mode").value;
+  const out = document.getElementById("result");
+  if (raw === "") { out.className = "error"; out.textContent = "Please enter a number."; return; }
+  const v = parseFloat(raw);
+  const deg = "\u00B0";
+  let text;
+  if (mode === "c2f") text = v.toFixed(2) + " " + deg + "C = " + (v * 9 / 5 + 32).toFixed(2) + " " + deg + "F";
+  else if (mode === "f2c") text = v.toFixed(2) + " " + deg + "F = " + ((v - 32) * 5 / 9).toFixed(2) + " " + deg + "C";
+  else text = v.toFixed(2) + " " + deg + "C = " + (v + 273.15).toFixed(2) + " K";
+  out.className = "";
+  out.textContent = text;
+}
+</script>
+</body>
+</html>
