@@ -1,3 +1,4 @@
+// Windows version (uses "bat" instead of "sh")
 pipeline {
     agent any
 
@@ -5,7 +6,7 @@ pipeline {
         // CHANGE THIS to your own Docker Hub username
         DOCKERHUB_USER = 'sagarikasagar'
         IMAGE          = "${DOCKERHUB_USER}/temp-converter"
-        WEB_IMAGE      = "${DOCKERHUB_USER}/temp-converter-web"
+        WEB_IMAGE       = "${DOCKERHUB_USER}/temp-converter-web"
     }
 
     // SCM trigger: Jenkins checks GitHub every 2 minutes and builds if there is a new commit
@@ -45,20 +46,7 @@ pipeline {
             }
         }
 
-        stage('Build Frontend Image') {
-            steps {
-                bat 'docker build -f Dockerfile.web -t %WEB_IMAGE%:%BUILD_NUMBER% -t %WEB_IMAGE%:latest .'
-            }
-        }
-
-        stage('Run Frontend') {
-            steps {
-                bat(returnStatus: true, script: 'docker rm -f temp-web')
-                bat 'docker run -d --name temp-web -p 8081:80 %WEB_IMAGE%:%BUILD_NUMBER%'
-            }
-        }
-
-        stage('Push to Docker Hub') {
+                stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
                                                   usernameVariable: 'DH_USER',
