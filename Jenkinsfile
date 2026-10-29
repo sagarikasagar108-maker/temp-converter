@@ -33,7 +33,7 @@ pipeline {
                 // If the scan itself has a problem, the stage turns yellow but the pipeline continues.
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     bat 'docker save -o image.tar %IMAGE%:%BUILD_NUMBER%'
-                    bat 'docker run --rm -v trivy-cache:/root/.cache/ -v "%WORKSPACE%":/work aquasec/trivy:latest image --timeout 20m --scanners vuln --input /work/image.tar --severity HIGH,CRITICAL --exit-code 0'
+                    bat 'docker run --rm -v trivy-cache:/root/.cache/ -v "%WORKSPACE%":/work aquasec/trivy:latest image --timeout 20m --scanners vuln --skip-db-update --java-db-repository ghcr.io/aquasecurity/trivy-java-db:1 --input /work/image.tar --severity HIGH,CRITICAL --exit-code 0'
                 }
             }
         }
