@@ -3,10 +3,9 @@ pipeline {
     agent any
 
     environment {
-        // CHANGE THIS to your own Docker Hub username
         DOCKERHUB_USER = 'sagarikasagar'
         IMAGE          = "${DOCKERHUB_USER}/temp-converter"
-        WEB_IMAGE       = "${DOCKERHUB_USER}/temp-converter-web"
+        WEB_IMAGE      = "${DOCKERHUB_USER}/temp-converter-web"
     }
 
     // SCM trigger: Jenkins checks GitHub every 2 minutes and builds if there is a new commit
@@ -23,14 +22,12 @@ pipeline {
 
         stage('Build & Test (inside Docker)') {
             steps {
-                // Compiles, runs JUnit tests and builds the image. Fails if a test fails.
                 bat 'docker build -t %IMAGE%:%BUILD_NUMBER% -t %IMAGE%:latest .'
             }
         }
 
         stage('Security Scan (Trivy)') {
             steps {
-                // If the scan itself has a problem, the stage turns yellow but the pipeline continues.
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     bat 'docker save -o image.tar %IMAGE%:%BUILD_NUMBER%'
                     bat 'docker run --rm -v trivy-cache:/root/.cache/ -v "%WORKSPACE%":/work aquasec/trivy:latest image --timeout 20m --scanners vuln --skip-db-update --java-db-repository ghcr.io/aquasecurity/trivy-java-db:1 --input /work/image.tar --severity HIGH,CRITICAL --exit-code 0'
@@ -45,7 +42,20 @@ pipeline {
             }
         }
 
-                stage('Push to Docker Hub') {
+        stage('Build Frontend Image') {
+            steps {
+                bat 'docker build -f Dockerfile.web -t %WEB_IMAGE%:%BUILD_NUMBER% -t %WEB_IMAGE%:latest .'
+            }
+        }
+
+        stage('Run Frontend') {
+            steps {
+                bat(returnStatus: true, script: 'docker rm -f temp-web')
+                bat 'docker run -d -p 8081:80 --name temp-web %WEB_IMAGE%:%BUILD_NUMBER%'
+            }
+        }
+
+        stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
                                                   usernameVariable: 'DH_USER',
